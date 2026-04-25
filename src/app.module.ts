@@ -4,6 +4,7 @@ import { AppService } from './app.service';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
 import { SeedService } from './seed/seed.service';
+import { PlatformModule } from './modules/platformAdmin/platform.module';
 
 
 @Module({
@@ -11,7 +12,8 @@ import { SeedService } from './seed/seed.service';
     isGlobal: true,
     envFilePath: '.env',
   }),
-PrismaModule
+PrismaModule,
+PlatformModule
 ],
   controllers: [AppController],
   providers: [AppService,SeedService],

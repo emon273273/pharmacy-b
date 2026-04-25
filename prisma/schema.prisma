@@ -1,19 +1,172 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
 }
 
+// ================= ENUMS =================
+enum UserRole {
+  SUPER_ADMIN
+  TENANT_ADMIN
+  BRANCH_MANAGER
+  PHARMACIST
+  SALES_STAFF
+  INVENTORY_STAFF
+  ACCOUNTANT
+}
+
+enum SubscriptionPlan {
+  BASIC
+  STANDARD
+  PREMIUM
+}
+
+enum DosageForm {
+  TABLET
+  CAPSULE
+  SYRUP
+  SUSPENSION
+  INJECTION
+  CREAM
+  OINTMENT
+  DROPS
+  INHALER
+  SUPPOSITORY
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+model Tenant {
+  id                    String           @id @default(ulid())
+  name                  String
+  subdomain             String           @unique
+  tradeLicense          String?
+  dgdaLicense           String?
+  email                 String           @unique
+  phone                 String?
+  address               String?
+  logoUrl               String?
+  isActive              Boolean          @default(true)
+  subscriptionPlan      SubscriptionPlan @default(BASIC)
+  subscriptionStartDate DateTime         @default(now())
+  subscriptionEndDate   DateTime?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  branch   Branch[]
+  users    User[]
+  products Product[]
+  stocks   Stock[]
+}
+
+model Branch {
+  id          String   @id @default(ulid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  name        String
+  dgdaLicense String?
+  address     String?
+  phone       String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  users       User[]
+  stocks      Stock[]
+
+  @@index([tenantId])
+}
+
 model User {
-  id    Int     @id @default(autoincrement())
-  email String  @unique
-  name  String?
+  id           String   @id @default(ulid())
+  tenantId     String? // Nullable for SUPER_ADMIN
+  tenant       Tenant?  @relation(fields: [tenantId], references: [id])
+  branchId     String? // nullable for TENANT_ADMIN / SUPER_ADMIN
+  branch       Branch?  @relation(fields: [branchId], references: [id])
+  name         String
+  email        String
+  passwordHash String
+  role         UserRole @default(TENANT_ADMIN)
+  phone        String?
+  nidNumber    String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  refreshTokens RefreshToken[]
+
+  @@unique([email, tenantId], map: "user_email_tenant_id_unique")
+  @@index([tenantId, branchId])
+}
+
+model RefreshToken {
+  id        String   @id @default(ulid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Product {
+  id                   String     @id @default(ulid())
+  tenantId             String
+  tenant               Tenant     @relation(fields: [tenantId], references: [id])
+  name                 String
+  genericName          String
+  manufacturer         String
+  category             String
+  dosageForm           DosageForm
+  strength             String
+  packSize             String?
+  unitOfSale           String
+  purchasePrice        Decimal
+  sellingPrice         Decimal
+  vatPercentage        Decimal    @default(0)
+  prescriptionRequired Boolean    @default(false)
+  barCode              String?    @unique
+  isActive             Boolean    @default(true)
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+
+  stocks Stock[]
+
+  @@index([tenantId])
+  @@index([genericName])
+}
+
+model Stock {
+  id            String    @id @default(ulid())
+  tenantId      String
+  tenant        Tenant    @relation(fields: [tenantId], references: [id])
+  branchId      String
+  branch        Branch    @relation(fields: [branchId], references: [id])
+  productId     String
+  product       Product   @relation(fields: [productId], references: [id])
+  batchNumber   String
+  mfgDate       DateTime?
+  expiryDate    DateTime
+  quantity      Int       @default(0)
+  purchasePrice Decimal   @default(0)
+  createdAt     DateTime  @default(now())
+
+  @@index([tenantId, branchId, productId])
+  @@index([expiryDate])
+}
+
+model AuditLog {
+  id         String   @id @default(ulid())
+  userId     String
+  tenantId   String?
+  action     String // CREATE, UPDATE, DELETE, LOGIN_FAILED
+  entityType String // TENANT, USER, PRODUCT, STOCK
+  entityId   String?
+  oldValue   String?  @db.Text
+  newValue   String?  @db.Text
+  ipAddress  String?
+  createdAt  DateTime @default(now())
 }

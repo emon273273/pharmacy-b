@@ -3,6 +3,7 @@ import { LoginDto } from './dto/login.dto';
 import { PlatformService } from './platform.service';
 import { CreateDto } from './dto/create.dto';
 import { ApiResponse } from 'src/common/dto/response.dto';
+import { PlatformAdmin } from 'src/common/decorators/platform-admin.decorator';
 
 @Controller('api/platform')
 export class PlatformController {
@@ -16,6 +17,7 @@ export class PlatformController {
 
   // create a new tenant (branch )
   @Post('create')
+  @PlatformAdmin()
   @HttpCode(HttpStatus.CREATED)
   async create(@Body() createDto: CreateDto) {
     const result = await this.platformService.create(createDto);

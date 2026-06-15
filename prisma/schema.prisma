@@ -17,6 +17,10 @@ enum UserRole {
   ACCOUNTANT
 }
 
+enum PlatformUserRole {
+  SUPER_ADMIN
+}
+
 enum SubscriptionPlan {
   BASIC
   STANDARD
@@ -42,6 +46,18 @@ enum UserStatus {
   SUSPENDED
 }
 
+// platform user 
+model PlatformUser {
+  id           String           @id @default(ulid())
+  name         String
+  email        String           @unique
+  passwordHash String
+  role         PlatformUserRole @default(SUPER_ADMIN)
+  isActive     Boolean          @default(true)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+}
+
 model Tenant {
   id                    String           @id @default(ulid())
   name                  String
@@ -53,9 +69,6 @@ model Tenant {
   address               String?
   logoUrl               String?
   isActive              Boolean          @default(true)
-  subscriptionPlan      SubscriptionPlan @default(BASIC)
-  subscriptionStartDate DateTime         @default(now())
-  subscriptionEndDate   DateTime?
   createdAt             DateTime         @default(now())
   updatedAt             DateTime         @updatedAt
 
